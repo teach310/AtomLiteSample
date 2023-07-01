@@ -10,12 +10,6 @@
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
 CRGB leds[NUM_LEDS];
 
-bool isAvailable()
-{
-  Wire.beginTransmission(VL53L0X_I2C_ADDR);
-  return (Wire.endTransmission() == 0);
-}
-
 void setup()
 {
   auto cfg = M5.config();
