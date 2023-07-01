@@ -4,6 +4,8 @@
 
 #define NUM_LEDS 1
 #define LED_DATA_PIN 27
+#define SDA_PIN 25
+#define SCL_PIN 21
 
 Adafruit_VL53L0X lox = Adafruit_VL53L0X();
 CRGB leds[NUM_LEDS];
@@ -18,17 +20,9 @@ void setup()
 {
   auto cfg = M5.config();
   M5.begin(cfg);
-  Wire.begin(25, 21);
   FastLED.addLeds<WS2811, LED_DATA_PIN, GRB>(leds, NUM_LEDS);
   FastLED.setBrightness(20);
-  if (isAvailable())
-  {
-    Serial.println("VL53L0X found");
-  }
-  else
-  {
-    Serial.println("VL53L0X not found");
-  }
+  Wire.setPins(SDA_PIN, SCL_PIN);
   if (!lox.begin())
   {
     Serial.println(F("Failed to boot VL53L0X"));
