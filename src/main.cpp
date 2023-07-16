@@ -66,7 +66,39 @@ bool connect()
 {
   BLEClient *pClient = BLEDevice::createClient();
   pClient->setClientCallbacks(new MyClientCallbacks());
-  return pClient->connect(pPeripheral);
+  if (!pClient->connect(pPeripheral))
+  {
+    return false;
+  }
+
+  BLERemoteService *pRemoteService = pClient->getService(serviceUUID);
+  if (pRemoteService == nullptr)
+  {
+    Serial.print("Failed to find our service UUID: ");
+    Serial.println(serviceUUID.toString().c_str());
+    pClient->disconnect();
+    return false;
+  }
+  Serial.println(" - Found our service");
+
+  BLERemoteCharacteristic *pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
+  if (pRemoteCharacteristic == nullptr)
+  {
+    Serial.print("Failed to find our characteristic UUID: ");
+    Serial.println(charUUID.toString().c_str());
+    pClient->disconnect();
+    return false;
+  }
+  Serial.println(" - Found our characteristic");
+
+  if (pRemoteCharacteristic->canRead())
+  {
+    std::string value = pRemoteCharacteristic->readValue();
+    Serial.print("The characteristic value was: ");
+    Serial.println(value.c_str());
+  }
+
+  return true;
 }
 
 void setup()
