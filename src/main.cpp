@@ -9,6 +9,13 @@
 
 static BLEUUID serviceUUID(SERVICE_UUID);
 static BLEUUID charUUID(CHARACTERISTIC_UUID);
+static BLEAdvertisedDevice *pPeripheral;
+
+static int8_t state = 0;
+
+#define STATE_IDLE 0
+#define STATE_DO_CONNECT 1
+#define STATE_CONNECTED 3
 
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
@@ -18,8 +25,25 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
     if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID))
     {
       Serial.println("Device found!");
+      pPeripheral = new BLEAdvertisedDevice(advertisedDevice);
       advertisedDevice.getScan()->stop();
+      state = STATE_DO_CONNECT;
     }
+  }
+};
+
+class MyClientCallbacks : public BLEClientCallbacks
+{
+  void onConnect(BLEClient *pclient)
+  {
+    Serial.println("onConnect");
+    state = STATE_CONNECTED;
+  }
+
+  void onDisconnect(BLEClient *pclient)
+  {
+    Serial.println("onDisconnect");
+    state = STATE_IDLE;
   }
 };
 
@@ -38,6 +62,13 @@ void scan()
   pBLEScan->start(5, false);
 }
 
+bool connect()
+{
+  BLEClient *pClient = BLEDevice::createClient();
+  pClient->setClientCallbacks(new MyClientCallbacks());
+  return pClient->connect(pPeripheral);
+}
+
 void setup()
 {
   auto cfg = M5.config();
@@ -51,4 +82,20 @@ void setup()
 
 void loop()
 {
+  switch (state)
+  {
+  case STATE_DO_CONNECT:
+    if (connect())
+    {
+      Serial.println("Connected to server");
+    }
+    else
+    {
+      Serial.println("Failed to connect");
+      state = STATE_IDLE;
+    }
+    break;
+  default:
+    break;
+  }
 }
