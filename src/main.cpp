@@ -6,11 +6,14 @@
 
 #define SERVICE_UUID "068c47b7-fc04-4d47-975a-7952be1a576f"
 #define CHARACTERISTIC_UUID "e3737b3f-a08d-405b-b32d-35a8f6c64c5d"
+#define NOTIFY_CHARACTERISTIC_UUID "c9da2ce8-d119-40d5-90f7-ef24627e8193"
 
 static BLEUUID serviceUUID(SERVICE_UUID);
 static BLEUUID charUUID(CHARACTERISTIC_UUID);
+static BLEUUID notifyCharUUID(NOTIFY_CHARACTERISTIC_UUID);
 static BLEAdvertisedDevice *pPeripheral;
 static BLERemoteCharacteristic *pRemoteCharacteristic;
+static BLERemoteCharacteristic *pNotifyCharacteristic;
 
 static int8_t state = 0;
 
@@ -47,6 +50,20 @@ class MyClientCallbacks : public BLEClientCallbacks
     state = STATE_IDLE;
   }
 };
+
+static void notifyCallback(
+    BLERemoteCharacteristic *pBLERemoteCharacteristic,
+    uint8_t *pData,
+    size_t length,
+    bool isNotify)
+{
+  Serial.print("Notify callback for characteristic ");
+  Serial.print(pBLERemoteCharacteristic->getUUID().toString().c_str());
+  Serial.print(" of data length ");
+  Serial.println(length);
+  Serial.print("data: ");
+  Serial.println((char *)pData);
+}
 
 void scan()
 {
@@ -105,6 +122,21 @@ bool connect()
     Serial.println("Characteristic is not writable");
     pClient->disconnect();
     return false;
+  }
+
+  pNotifyCharacteristic = pRemoteService->getCharacteristic(notifyCharUUID);
+  if (pNotifyCharacteristic == nullptr)
+  {
+    Serial.print("Failed to find our notify characteristic UUID: ");
+    Serial.println(notifyCharUUID.toString().c_str());
+    pClient->disconnect();
+    return false;
+  }
+
+  if (pNotifyCharacteristic->canNotify())
+  {
+    pNotifyCharacteristic->registerForNotify(notifyCallback);
+    Serial.println(" - Registered for notify");
   }
 
   return true;
