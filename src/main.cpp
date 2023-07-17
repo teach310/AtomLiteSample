@@ -10,6 +10,7 @@
 static BLEUUID serviceUUID(SERVICE_UUID);
 static BLEUUID charUUID(CHARACTERISTIC_UUID);
 static BLEAdvertisedDevice *pPeripheral;
+static BLERemoteCharacteristic *pRemoteCharacteristic;
 
 static int8_t state = 0;
 
@@ -81,7 +82,8 @@ bool connect()
   }
   Serial.println(" - Found our service");
 
-  BLERemoteCharacteristic *pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
+  // Writeで使うためにCharacteristicを保持しておく
+  pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
   if (pRemoteCharacteristic == nullptr)
   {
     Serial.print("Failed to find our characteristic UUID: ");
@@ -98,7 +100,25 @@ bool connect()
     Serial.println(value.c_str());
   }
 
+  if (!pRemoteCharacteristic->canWrite())
+  {
+    Serial.println("Characteristic is not writable");
+    pClient->disconnect();
+    return false;
+  }
+
   return true;
+}
+
+void connectedLoop()
+{
+  M5.update();
+  if (M5.BtnA.wasClicked())
+  {
+    String value = "Write Data " + String(random(100, 999));
+    pRemoteCharacteristic->writeValue(value.c_str(), value.length());
+    Serial.println("Write: " + value);
+  }
 }
 
 void setup()
@@ -126,6 +146,9 @@ void loop()
       Serial.println("Failed to connect");
       state = STATE_IDLE;
     }
+    break;
+  case STATE_CONNECTED:
+    connectedLoop();
     break;
   default:
     break;
